@@ -5,10 +5,11 @@ date: "February 25, 2018"
 output: html_document
 ---
 
-## 1. Path from east to west between Top 10 US Cities  
+## Path from east to west between Top 10 US Cities  
 
-THe goal to show in the map of USA Top 10 cities (by population) and connect them with the path from
+The goal to show in the map of USA Top 10 cities (by population) and connect them with the path from
 east (New York) to west (San Jose), show coordinates, population and the distance to next city on popup.
+See result here <https://jsternin.github.io/DevDataProdPA1/>
 
 
 ```{r setup, include=FALSE}
@@ -35,7 +36,7 @@ getDistanceFromLatLng <- function (lat1, lng1, lat2, lng2) {
 }
 ```
 
-Load data (coordinates, populatio, path)
+Load data (coordinates, population, path)
 
 ```{r get_data,echo=TRUE,include=TRUE}
 
@@ -83,15 +84,17 @@ print(top10cities)
 Find center of the map and zoom. Add Circle markers with radius proportional to city population and other
 info about city.
 
-```{r do_map,echo=TRUE,include=TRUE}
+```{r do_map,echo=TRUE,include=TRUE,fig.width=10,fig.height=5}
 cntlon = (min(coord$lon,na.rm=TRUE)  + max(coord$lon,na.rm=TRUE))/2
 cntlat = (min(coord$lat,na.rm=TRUE) + max(coord$lat,na.rm=TRUE))/2
-coord %>% leaflet() %>% setView(cntlon, cntlat, zoom = 3) %>% addTiles() %>%
+coord %>% leaflet() %>% setView(cntlon, cntlat, zoom = 4) %>% addTiles() %>%
 addCircleMarkers(popup=sprintf(
   "Population: %d, Latitd: %5.2f, Lontitd: %5.2f %s",
    top10cities$pop,top10cities$Coord.lat,top10cities$Coord.lon,east_west$dist2west),
-    label=top10cities$name, radius = sqrt(top10cities$pop/2000),clusterOptions=markerClusterOptions()) %>%  addPolylines(lat = east_west$lat, lng = east_west$lon)
+    label=top10cities$name, radius = sqrt(top10cities$pop/2000),
+  clusterOptions=markerClusterOptions()) %>%  
+  addPolylines(lat = east_west$lat, lng = east_west$lon)
 
 ```
 
-## Conclusiion 
+
