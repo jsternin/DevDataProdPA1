@@ -1,0 +1,97 @@
+---
+title: "DevDataProductsPA1"
+author: "Jeff Sternin"
+date: "February 25, 2018"
+output: html_document
+---
+
+## 1. Path from east to west between Top 10 US Cities  
+
+THe goal to show in the map of USA Top 10 cities (by population) and connect them with the path from
+east (New York) to west (San Jose), show coordinates, population and the distance to next city on popup.
+
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+library(leaflet)
+library(ggmap)
+library(maps)
+```
+
+```{r calculate_distance,echo=TRUE,include=TRUE}
+getDistanceFromLatLng <- function (lat1, lng1, lat2, lng2) { 
+  ## modified for R from here https://simplemaps.com/resources/location-distance
+  deg2rad <- function (deg){deg * (pi/180);}
+  square <- function (x){x^2;}
+  r <- 6371; # radius of the earth in km
+  lat1=deg2rad(lat1);
+  lat2=deg2rad(lat2);
+  lat_dif<-lat2-lat1;
+  lng_dif<-deg2rad(lng2-lng1);
+  a<-square(sin(lat_dif/2))+cos(lat1)*cos(lat2)*square(sin(lng_dif/2));
+  d<-2*r*asin(sqrt(a));
+  d * 0.621371;
+}
+```
+
+Load data (coordinates, populatio, path)
+
+```{r get_data,echo=TRUE,include=TRUE}
+
+citinames <- c("New York,New York","Chicago,Illinois","Los Angeles, California",
+               "Houston, Texas","Philadelphia, Pennsylvania", "Phoenix, Arizona","San Antonio, Texas",
+               "San Diego, California","Dallas, Texas","San Jose, California")
+coord = data.frame(lon = c(-73.968285,-87.62980,-118.24368, -95.36980,-75.16522,
+                           -112.07404,-98.49363, -117.16108, -96.79699,-121.88633), #-115.17456
+                   lat = c(40.785091, 41.87811, 34.05223, 29.76043, 39.95258, 
+                               33.44838, 29.42412, 32.71574, 32.77666, 37.33821)) #36.10237
+path =     c(1,5,2,9,4,7,6,8,3,10) ## east-west path 
+next2west = c(1:10) ## wext city to the west from ith ranked city
+for(i in 1:length(path)) { 
+  if (path[i] < length(path)) 
+    next2west[path[i]] = path[i+1]
+  else
+    next2west[path[i]] = path[i]
+}
+##next2west =c(5,9,10,7,2,8,6,3,4,10) ## next westward city on the path 
+path_lon<-NULL;path_lat<-NULL;dist2west<-NULL;
+for(i in 1:10) dist2west <- c("",dist2west)
+for(i in 1:length(path)) {
+  i1 <- path[i]; 
+  path_lon <- c(path_lon,coord[i1,1]);
+  path_lat <- c(path_lat,coord[i1,2])
+  i2 <- next2west[i]
+  dist <- getDistanceFromLatLng(coord[i,2],coord[i,1],coord[i2,2],coord[i2,1])
+  str <- sprintf("Dist.to %s: %5.2f miles", citinames[i2],dist)
+  dist2west[i] <- str
+}
+east_west<- data.frame(lon=path_lon,lat=path_lat,dist2west=dist2west)
+top10cities <- data.frame( name = citinames,
+    population = c(8405837,3884307,2718782,2195914,1553165,1513367,1409019,1355896,1257676,998537),
+    Coord = coord ) 
+
+print("Top 10 US Cities by population")
+print(top10cities)
+```
+
+
+```{r get_coord,echo=TRUE,include=FALSE}
+##top10citiesCoord<-geocode(citinames)  ## get lat/long coordinates.
+```
+
+Find center of the map and zoom. Add Circle markers with radius proportional to city population and other
+info about city.
+
+```{r do_map,echo=TRUE,include=TRUE}
+cntlon = (min(coord$lon,na.rm=TRUE)  + max(coord$lon,na.rm=TRUE))/2
+cntlat = (min(coord$lat,na.rm=TRUE) + max(coord$lat,na.rm=TRUE))/2
+coord %>% leaflet() %>% setView(cntlon, cntlat, zoom = 3) %>% addTiles() %>%
+addCircleMarkers(popup=sprintf(
+  "Population: %d, Latitd: %5.2f, Lontitd: %5.2f %s",
+   top10cities$pop,top10cities$Coord.lat,top10cities$Coord.lon,east_west$dist2west),
+    label=top10cities$name, radius = sqrt(top10cities$pop/2000),clusterOptions=markerClusterOptions()) %>%  addPolylines(lat = east_west$lat, lng = east_west$lon)
+
+```
+
+## Conclusiion 
